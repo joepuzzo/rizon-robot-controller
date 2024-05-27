@@ -1,0 +1,9 @@
+{
+  "j0": { "limNeg": -160, "limPos": 160, "homePos": 0 },
+  "j1": { "limNeg": -130, "limPos": 130, "homePos": 0 },
+  "j2": { "limNeg": -170, "limPos": 170, "homePos": 0 },
+  "j3": { "limNeg": -107, "limPos": 154, "homePos": 0 },
+  "j4": { "limNeg": -170, "limPos": 170, "homePos": 0 },
+  "j5": { "limNeg": -80, "limPos": 260, "homePos": 0 },
+  "j6": { "limNeg": -170, "limPos": 170, "homePos": 0 }
+}

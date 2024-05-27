@@ -1,0 +1,6 @@
+python-socketio
+colorama
+pyee
+requests
+websocket-client
+scipy
