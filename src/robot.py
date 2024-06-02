@@ -303,8 +303,14 @@ class Robot(EventEmitter):
         target = ' '.join(map(str, angles))
         self.move_j(target, speed)
 
+    # -------------------- Freedrive Functions --------------------
+
     def robot_freedrive_enable(self, frame, cartFloatingAxis, nullspace=False):
         logger('Enabling freedrive')
+
+        # Validate action
+        if not self.validate(enabled=True, cleared=True, log='attempting to freedrive'):
+            return
 
         x = cartFloatingAxis['x']
         y = cartFloatingAxis['y']
@@ -350,10 +356,14 @@ class Robot(EventEmitter):
         self.robot.stop()
         self.emit('meta')
 
-    # ---------- Motor Functions ----------
+    # -------------------- Motor Functions --------------------
 
     def motor_set_position(self, id, pos, speed=0.1):
         logger(f'Set position for motor {id} to pos {pos} at speed {speed}')
+
+        # Validate action
+        if not self.validate(enabled=True, cleared=True, log=f'attempting to move motor {id}'):
+            return
 
         # Update the state variable
         self.robot.getRobotStates(self.robotState)
@@ -373,12 +383,35 @@ class Robot(EventEmitter):
         logger(f'Home motor {id}')
         self.motor_map[id].go_home()
 
-    # ---------- Gripper Functions ----------
+    # -------------------- Gripper Functions --------------------
 
-    def gripper_set_position(self, pos, speed=500):
-        logger(f'Set position for gripper to {pos}, at speed {speed}')
+    def gripper_set_position(self, pos, speed=0.01, force=0):
 
-    # ---------- Helper Functions -----------
+        # Convert the % open 0-100 into a width in meters
+        width = pos / 1000.0
+
+        logger(
+            f'Opening gripper to {pos}% ( width of {width}m ), at a speed of {speed}m/s, and a force of {force}N')
+
+        try:
+
+            # Set to primitive execution if we need to
+            if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
+                print(
+                    f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before moveJ")
+                self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+
+            # Move the gripper
+            self.gripper.move(width, speed, force)
+
+        except Exception as e:
+            # Print exception error message
+            self.errors.append({'type': 'error', 'message': str(e)})
+            logger(str(e))
+
+        self.emit('meta')
+
+    # -------------------- Move Functions ---------------------
 
     def move_j(self, target, vel, stop=True):
 
@@ -419,6 +452,8 @@ class Robot(EventEmitter):
             logger(str(e))
 
         self.emit('meta')
+
+    # -------------------- Force Tourque ---------------------
 
     def zero_ft_sensors(self):
 

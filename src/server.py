@@ -121,9 +121,10 @@ def start_server(config):
     # ---------- GRIPPER COMMANDS ----------
 
     @sio.on('gripperSetPos', namespace='/robot')
-    def on_gripper_set_pos(pos, speed):
-        logger(f"Controller says gripperSetPos to {pos} at speed {speed}")
-        robot.gripper_set_position(pos, speed)
+    def on_gripper_set_pos(pos, speed, force):
+        logger(
+            f"Controller says gripperSetPos to {pos}% at speed {speed} and a force of {force}")
+        robot.gripper_set_position(pos, speed, force)
 
     # ---------- ROBOT COMMANDS ----------
 
@@ -148,7 +149,11 @@ def start_server(config):
         robot.robot_center()
 
     @sio.on('robotSetAngles', namespace='/robot')
-    def on_robot_set_angles(angles, speed):
+    def on_robot_set_angles(angles, speed=None):
+
+        if speed is None:
+            speed = 0.1
+
         logger(f"Controller says setAngles for robot")
         robot.robot_set_angles(angles, speed)
 
