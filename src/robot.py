@@ -451,7 +451,10 @@ class Robot(EventEmitter):
             self.errors.append({'type': 'error', 'message': str(e)})
             logger(str(e))
 
+        # Note order is important here, we need to make sure meta is sent before moved
+        # This will ensure anyone listening to move event has the corect meta state of this robot :)
         self.emit('meta')
+        self.emit('moved')
 
     # -------------------- Force Tourque ---------------------
 
