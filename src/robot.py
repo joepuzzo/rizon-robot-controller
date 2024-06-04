@@ -473,6 +473,10 @@ class Robot(EventEmitter):
 
     def move_j(self, target, vel, stop=True):
 
+        # Validate action
+        if not self.validate(enabled=True, cleared=True, moving=True, log='moveJ'):
+            return
+
         try:
 
             # Set to primitive execution if we need to
@@ -515,6 +519,10 @@ class Robot(EventEmitter):
         self.emit('moved')
 
     def move_l(self, target, frame='WORLD WORLD_ORIGIN', maxVel="0.1", preferJntPos=None, stop=True):
+
+        # Validate action
+        if not self.validate(enabled=True, cleared=True, moving=True, log='moveL'):
+            return
 
         try:
             # Set to primitive execution if we need to
