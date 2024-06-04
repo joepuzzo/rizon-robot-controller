@@ -188,7 +188,7 @@ class Robot(EventEmitter):
     def busy(self):
         return self.robot.isBusy()
 
-    def validate(self, enabled=False, cleared=False, log=''):
+    def validate(self, enabled=False, cleared=False, moving=False, log=''):
         # If action requires robot to be enabled and we are not then error out
         if enabled and self.stopped:
             message = f'Enable before {log}'
@@ -203,6 +203,14 @@ class Robot(EventEmitter):
             self.errors.append({'type': 'warning', 'message': message})
             self.emit('meta')
             return False
+        # If action requires robot to be NOT moving
+        if moving and self.moving:
+            message = f'Robot is currently moving, unable to {log}'
+            logger(message)
+            self.errors.append({'type': 'warning', 'message': message})
+            self.emit('meta')
+            return False
+
         return True
 
     def robot_state(self):
@@ -296,7 +304,7 @@ class Robot(EventEmitter):
     def robot_set_angles(self, angles, speed=0.1):
         logger(f'robotSetAngles at speed {speed} angles: {angles}')
         # Validate action
-        if not self.validate(enabled=True, cleared=True, log='attempting to move'):
+        if not self.validate(enabled=True, cleared=True, moving=True, log='move the robot'):
             return
 
         # Set all motors to a position via move_j
@@ -309,7 +317,7 @@ class Robot(EventEmitter):
         logger('Enabling freedrive')
 
         # Validate action
-        if not self.validate(enabled=True, cleared=True, log='attempting to freedrive'):
+        if not self.validate(enabled=True, cleared=True, moving=True, log='attempting to freedrive'):
             return
 
         x = cartFloatingAxis['x']
@@ -350,6 +358,56 @@ class Robot(EventEmitter):
 
         self.emit('meta')
 
+    def robot_joint_freedrive_enable(self, joints):
+        logger(f'Enabling Joint Freedrive for joints {joints}')
+
+        # Validate action
+        if not self.validate(enabled=True, cleared=True, moving=True, log='attempting to freedrive joints'):
+            return
+
+        if self.busy:
+            logger("Cannot enable freedrive, robot is busy")
+            return
+
+        try:
+
+            j0 = joints.get('j0', False)
+            j1 = joints.get('j1', False)
+            j2 = joints.get('j2', False)
+            j3 = joints.get('j3', False)
+            j4 = joints.get('j4', False)
+            j5 = joints.get('j5', False)
+            j6 = joints.get('j6', False)
+
+            self.freedrive = True
+
+            # Zero FT sensors
+            self.zero_ft_sensors()
+
+            self.freedrive = True
+
+            self.emit('meta')
+
+            # Switch to primitive execution mode for single-axis freedrive
+            self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+
+            # Convert the boolean values to their integer counterparts (1 for True, 0 for False)
+            floatingJoints = f"{int(j0)} {int(j1)} {int(j2)} {int(j3)} {int(j4)} {int(j5)} {int(j6)}"
+
+            logger("Executing primitive: FloatingSoft")
+
+            # Send command to robot
+            self.robot.executePrimitive(
+                f"FloatingSoft(jointFloatingSwitch={floatingJoints})"
+            )
+
+        except Exception as e:
+            # Print exception error message
+            self.errors.append({'type': 'error', 'message': str(e)})
+            logger(str(e))
+
+        self.emit('meta')
+
     def robot_freedrive_disable(self):
         logger('Disabling freedrive')
         self.freedrive = False
@@ -362,7 +420,7 @@ class Robot(EventEmitter):
         logger(f'Set position for motor {id} to pos {pos} at speed {speed}')
 
         # Validate action
-        if not self.validate(enabled=True, cleared=True, log=f'attempting to move motor {id}'):
+        if not self.validate(enabled=True, cleared=True, moving=True, log=f'move motor {id}'):
             return
 
         # Update the state variable
