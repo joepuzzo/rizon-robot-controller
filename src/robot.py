@@ -394,11 +394,11 @@ class Robot(EventEmitter):
             # Convert the boolean values to their integer counterparts (1 for True, 0 for False)
             floatingJoints = f"{int(j0)} {int(j1)} {int(j2)} {int(j3)} {int(j4)} {int(j5)} {int(j6)}"
 
-            logger("Executing primitive: FloatingSoft")
+            logger("Executing primitive: floatingSoft")
 
             # Send command to robot
             self.robot.executePrimitive(
-                f"FloatingSoft(jointFloatingSwitch={floatingJoints})"
+                f"floatingSoft(jointFloatingSwitch={floatingJoints})"
             )
 
         except Exception as e:
