@@ -419,13 +419,13 @@ class Robot(EventEmitter):
 
             # Set to primitive execution if we need to
             if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
-                print(
+                logger(
                     f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before moveJ")
                 self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
 
             # Build command
             command = f"MoveJ(target={target}, vel={vel})"
-            print(f"Executing Command: {command}")
+            logger(f"Executing Command: {command}")
 
             # We are moving to a new location
             self.moving = True
@@ -445,6 +445,49 @@ class Robot(EventEmitter):
 
             if stop:
                 self.robot.stop()
+
+        except Exception as e:
+            # Print exception error message
+            self.errors.append({'type': 'error', 'message': str(e)})
+            logger(str(e))
+
+        # Note order is important here, we need to make sure meta is sent before moved
+        # This will ensure anyone listening to move event has the corect meta state of this robot :)
+        self.emit('meta')
+        self.emit('moved')
+
+    def move_l(self, target, frame='WORLD WORLD_ORIGIN', maxVel="0.1", preferJntPos=None, stop=True):
+
+        try:
+            # Set to primitive execution if we need to
+            if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
+                logger(
+                    f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before moveL")
+                self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+
+            # Build command
+            command = f"MoveL(target={target} {frame}, maxVel={maxVel})"
+
+            if preferJntPos:
+                command = f"MoveL(target={target} {frame}, maxVel={maxVel}, preferJntPos={preferJntPos})"
+
+            # We are moving to a new location
+            self.moving = True
+            self.emit('meta')
+
+            # Execute the command
+            self.robot.executePrimitive(command)
+
+            self.emit('meta')
+
+            # Wait for reached target
+            while (parse_pt_states(self.robot.getPrimitiveStates(), "reachedTarget") != "1"):
+                time.sleep(0.1)
+
+            if stop:
+                self.robot.stop()
+
+            self.moving = False
 
         except Exception as e:
             # Print exception error message

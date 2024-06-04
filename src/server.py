@@ -157,6 +157,24 @@ def start_server(config):
         logger(f"Controller says setAngles for robot")
         robot.robot_set_angles(angles, speed)
 
+    @sio.on('robotMoveL', namespace='/robot')
+    def on_robot_MoveL(parameters):
+        logger(
+            f"Controller says robotMoveL with parameters {json.dumps(parameters,  indent=4)}"
+        )
+
+        # Get parameters off of the event
+        position = parameters["position"]
+        frame = parameters["frame"]
+        speed = parameters["speed"]
+        preferJntPos = parameters["preferJntPos"]
+
+        # Call the robots moveL command
+        target = ' '.join(map(str, position))
+        jointString = ' '.join(map(str, position))
+        robot.move_l(target=target, frame=frame,
+                     maxVel=speed, preferJntPos=jointString)
+
     @sio.on('robotUpdateConfig', namespace='/robot')
     def on_robot_update_config(key, value):
         logger(f"Controller says updateConfig for robot")
