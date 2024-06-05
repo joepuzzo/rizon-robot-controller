@@ -171,9 +171,25 @@ def start_server(config):
 
         # Call the robots moveL command
         target = ' '.join(map(str, position))
-        jointString = ' '.join(map(str, position))
+        jointString = ' '.join(map(str, preferJntPos))
         robot.move_l(target=target, frame=frame,
                      maxVel=speed, preferJntPos=jointString)
+
+    @sio.on('robotMoveContact', namespace='/robot')
+    def on_robot_MoveContact(parameters):
+        logger(
+            f"Controller says robotMoveContact with parameters {json.dumps(parameters,  indent=4)}"
+        )
+
+        # Get parameters off of the event
+        contactDir = parameters["contactDir"]
+        contactVel = parameters["contactVel"]
+        maxContactForce = parameters["maxContactForce"]
+
+        # Call the robots moveL command
+        contactDirStr = ' '.join(map(str, contactDir))
+        robot.move_contact(contactDir=contactDirStr, contactVel=contactVel,
+                           maxContactForce=maxContactForce)
 
     @sio.on('robotUpdateConfig', namespace='/robot')
     def on_robot_update_config(key, value):

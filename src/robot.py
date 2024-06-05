@@ -565,6 +565,53 @@ class Robot(EventEmitter):
         self.emit('meta')
         self.emit('moved')
 
+    def move_contact(self, contactDir, contactVel, maxContactForce, stop=True):
+
+        # Validate action
+        if not self.validate(enabled=True, cleared=True, moving=True, log='moveContact'):
+            return
+
+        try:
+            # Set to primitive execution if we need to
+            if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
+                logger(
+                    f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before moveContact")
+                self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+
+            # Build command
+            command = f"Contact(contactDir={contactDir}, contactVel={contactVel}, maxContactForce={maxContactForce})"
+
+            # We are moving to a new location
+            self.moving = True
+            self.emit('meta')
+
+            # Zero FT sensors ( MUST BE DONE BEFORE CONACT )
+            self.zero_ft_sensors()
+
+            # Execute the command
+            self.robot.executePrimitive(command)
+
+            self.emit('meta')
+
+            # Wait for reached target
+            while (parse_pt_states(self.robot.getPrimitiveStates(), "reachedTarget") != "1"):
+                time.sleep(0.1)
+
+            if stop:
+                self.robot.stop()
+
+            self.moving = False
+
+        except Exception as e:
+            # Print exception error message
+            self.errors.append({'type': 'error', 'message': str(e)})
+            logger(str(e))
+
+        # Note order is important here, we need to make sure meta is sent before moved
+        # This will ensure anyone listening to move event has the corect meta state of this robot :)
+        self.emit('meta')
+        self.emit('moved')
+
     # -------------------- Force Tourque ---------------------
 
     def zero_ft_sensors(self):
