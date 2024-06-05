@@ -19,6 +19,10 @@ def emit(event, data):
 def start_server(config):
     # Create socket
     connection_string = f"http://{config['host']}:{config['port']}?id={config['id']}"
+
+    if config.get('url', False):
+        connection_string = f"{config['url']}?id={config['id']}"
+
     logger(f'Creating socket with connection string: {connection_string}')
 
     logger(f'Creating robot with config', json.dumps(config, indent=4))
@@ -158,13 +162,17 @@ def start_server(config):
         robot.robot_center()
 
     @sio.on('robotSetAngles', namespace='/robot')
-    def on_robot_set_angles(angles, speed=None):
+    def on_robot_set_angles(angles, speed=None, idle=None):
 
         if speed is None:
             speed = 0.1
 
-        logger(f"Controller says setAngles for robot")
-        robot.robot_set_angles(angles, speed)
+        if idle is None:
+            idle = True
+
+        logger(
+            f"Controller says setAngles for robot with angles {angles}, speed {speed} and idle {idle}")
+        robot.robot_set_angles(angles, speed, idle)
 
     @sio.on('robotMoveL', namespace='/robot')
     def on_robot_MoveL(parameters):
@@ -177,12 +185,13 @@ def start_server(config):
         frame = parameters["frame"]
         speed = parameters["speed"]
         preferJntPos = parameters["preferJntPos"]
+        idle = parameters.get("idle", True)
 
         # Call the robots moveL command
         target = ' '.join(map(str, position))
         jointString = ' '.join(map(str, preferJntPos))
         robot.move_l(target=target, frame=frame,
-                     maxVel=speed, preferJntPos=jointString)
+                     maxVel=speed, preferJntPos=jointString, stop=idle)
 
     @sio.on('robotMoveContact', namespace='/robot')
     def on_robot_MoveContact(parameters):
@@ -194,11 +203,12 @@ def start_server(config):
         contactDir = parameters["contactDir"]
         contactVel = parameters["contactVel"]
         maxContactForce = parameters["maxContactForce"]
+        idle = parameters.get("idle", True)
 
         # Call the robots moveL command
         contactDirStr = ' '.join(map(str, contactDir))
         robot.move_contact(contactDir=contactDirStr, contactVel=contactVel,
-                           maxContactForce=maxContactForce)
+                           maxContactForce=maxContactForce, stop=idle)
 
     @sio.on('robotUpdateConfig', namespace='/robot')
     def on_robot_update_config(key, value):

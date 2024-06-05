@@ -23,6 +23,8 @@ for i, val in enumerate(args):
         config['robot_ip'] = args[i + 1]
     elif val == '--local-ip':
         config['local_ip'] = args[i + 1]
+    elif val == '--url':
+        config['url'] = args[i + 1]
 
 # Start the server
 start_server(config)

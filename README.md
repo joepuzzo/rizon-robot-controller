@@ -41,3 +41,10 @@ Note you can optionally pass
 ```bash
 --robot-ip 192.168.0.100 --local-ip 192.168.0.104
 ```
+
+Also you can try connecting to the deployed instance of robot viewer like this
+
+```bash
+cd src
+sudo DEBUG='rizon:.*' ../venv/bin/python main.py --url https://robot-viewer.com
+```

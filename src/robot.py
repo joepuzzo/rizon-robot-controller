@@ -307,15 +307,16 @@ class Robot(EventEmitter):
 
         self.emit('meta')
 
-    def robot_set_angles(self, angles, speed=0.1):
-        logger(f'robotSetAngles at speed {speed} angles: {angles}')
+    def robot_set_angles(self, angles, speed=0.1, idle=True):
+        logger(
+            f'robotSetAngles at speed: {speed} angles: {angles} idle: {idle}')
         # Validate action
         if not self.validate(enabled=True, cleared=True, moving=True, log='move the robot'):
             return
 
         # Set all motors to a position via move_j
         target = ' '.join(map(str, angles))
-        self.move_j(target, speed)
+        self.move_j(target, speed, stop=idle)
 
     # -------------------- Freedrive Functions --------------------
 
@@ -464,6 +465,8 @@ class Robot(EventEmitter):
                 print(
                     f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before moveJ")
                 self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+
+            self.emit('meta')
 
             # Move the gripper
             self.gripper.move(width, speed, force)
@@ -637,8 +640,13 @@ class Robot(EventEmitter):
             "TCP force and moment reading in base frame BEFORE sensor zeroing: " +
             list2str(robot_states.extWrenchInBase) + "[N][Nm]")
 
+        # Set to primitive execution if we need to
+        if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
+            logger(
+                f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before ZeroFTSensor")
+            self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+
         # Run the "ZeroFTSensor" primitive to automatically zero force and torque sensors
-        self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
         self.robot.executePrimitive("ZeroFTSensor()")
 
         # WARNING: during the process, the robot must not contact anything, otherwise the result
