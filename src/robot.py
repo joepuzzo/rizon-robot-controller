@@ -76,6 +76,7 @@ class Robot(EventEmitter):
         self.robot_updates.start()
 
         # We are now ready
+        logger(f"Robot is now ready")
         self.ready = True
         self.emit('ready')
 

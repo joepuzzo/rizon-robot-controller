@@ -1,5 +1,6 @@
 import socketio
 import json
+import time
 from robot import Robot
 from debug import Debug
 
@@ -30,6 +31,9 @@ def start_server(config):
     def connect():
         logger('Connected to server')
         if robot.ready:
+            # Need this sleep to ensure connection is good
+            time.sleep(1)
+            logger('Sending register and state')
             emit('register', robot.meta)
             emit('state', robot.state)
 
