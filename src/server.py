@@ -72,6 +72,11 @@ def start_server(config):
         logger('Sending moved')
         emit('moved', robot.meta)
 
+    @robot.on('grasped')
+    def on_grasped():
+        logger('Sending grasped')
+        emit('grasped', robot.meta)
+
     @robot.on('pulse')
     def on_pulse(id, pos):
         emit('pulse', id)
@@ -121,10 +126,10 @@ def start_server(config):
     # ---------- GRIPPER COMMANDS ----------
 
     @sio.on('gripperSetPos', namespace='/robot')
-    def on_gripper_set_pos(pos, speed, force):
+    def on_gripper_set_pos(pos, speed, force, wait):
         logger(
-            f"Controller says gripperSetPos to {pos}% at speed {speed} and a force of {force}")
-        robot.gripper_set_position(pos, speed, force)
+            f"Controller says gripperSetPos to {pos}% at speed {speed} and a force of {force} and will wait {wait}")
+        robot.gripper_set_position(pos, speed, force, wait)
 
     # ---------- ROBOT COMMANDS ----------
 

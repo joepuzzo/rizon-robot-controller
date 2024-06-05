@@ -276,6 +276,11 @@ class Robot(EventEmitter):
     def robot_reset(self):
         logger('Clearing any robot errors/faults')
 
+        # Robot may have been doing something so we want to reset these
+        self.moving = False
+        self.homing = False
+        self.freedrive = False
+
         try:
             # Check if the robot has fault
             if self.robot.isFault():
@@ -443,7 +448,7 @@ class Robot(EventEmitter):
 
     # -------------------- Gripper Functions --------------------
 
-    def gripper_set_position(self, pos, speed=0.01, force=0):
+    def gripper_set_position(self, pos, speed=0.01, force=0, wait=None):
 
         # Convert the % open 0-100 into a width in meters
         width = pos / 1000.0
@@ -462,12 +467,20 @@ class Robot(EventEmitter):
             # Move the gripper
             self.gripper.move(width, speed, force)
 
+            if wait is not None:
+                logger(
+                    f"Waiting for {wait} seconds to give gripper time to move")
+                time.sleep(wait)
+
         except Exception as e:
             # Print exception error message
             self.errors.append({'type': 'error', 'message': str(e)})
             logger(str(e))
 
+        # Note order is important here, we need to make sure meta is sent before grasped
+        # This will ensure anyone listening to grasped event has the corect meta state of this robot :)
         self.emit('meta')
+        self.emit('grasped')
 
     # -------------------- Move Functions ---------------------
 
