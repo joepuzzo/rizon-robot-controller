@@ -85,6 +85,11 @@ def start_server(config):
         logger('Sending grasped')
         emit('grasped', robot.meta)
 
+    @robot.on('zeroedFT')
+    def on_zeroed_ft():
+        logger('Sending zeroedFT')
+        emit('zeroedFT', robot.meta)
+
     @robot.on('pulse')
     def on_pulse(id, pos):
         emit('pulse', id)
@@ -145,6 +150,15 @@ def start_server(config):
     def on_robot_stop():
         logger(f"Controller says stop robot")
         robot.robot_stop()
+
+    @sio.on('robotMode', namespace='/robot')
+    def on_robot_mode(mode):
+        logger(f"Controller says put the robot into {mode}")
+        if mode == "IDLE":
+            robot.robot_idle()
+
+        logger('Sending mode change event')
+        emit('mode', mode)
 
     @sio.on('robotFreeze', namespace='/robot')
     def on_robot_freeze():
@@ -264,5 +278,10 @@ def start_server(config):
     @sio.on('robotZero', namespace='/robot')
     def on_robot_zero():
         logger(f"NOT SUPPORTED: robotZero is not supported on Rizon Robot")
+
+    @sio.on('robotZeroFT', namespace='/robot')
+    def on_robot_zero_ft():
+        logger(f"Controller says zero force tourque robot")
+        robot.zero_ft_sensors()
 
     sio.wait()

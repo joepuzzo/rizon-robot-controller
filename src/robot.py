@@ -227,12 +227,22 @@ class Robot(EventEmitter):
         self.robot.stop()
         self.freedrive = False
         self.stopped = True
+        self.moving = False
+        self.emit('meta')
+
+    def robot_idle(self):
+        logger('Idle robot')
+        self.robot.stop()
+        # Explicitly dont call stopped because stopped means disabled ( we are not disabled just idled )
+        self.freedrive = False
+        self.moving = False
         self.emit('meta')
 
     def robot_freeze(self):
         logger('Freeze robot')
         self.robot.stop()
         self.freedrive = False
+        self.moving = False
         # note specifically dont set stopped as we are still enabled
         self.emit('meta')
 
@@ -665,4 +675,49 @@ class Robot(EventEmitter):
             "TCP force and moment reading in base frame AFTER sensor zeroing: " +
             list2str(robot_states.extWrenchInBase) + "[N][Nm]")
 
+        # Note order is important here, we need to make sure state is updated before we let anyone know that we are done zeroing
+        self.emit('encoder')
         self.emit('meta')
+        self.emit('zeroedFT')
+
+    # -------------------- Measrurements ---------------------
+
+    def average_read(self):
+
+        # Initialize the robot states variable
+        robot_states = flexivrdk.RobotStates()
+
+        # Initialize the number of samples
+        num_samples = 100
+
+        # Initialize the sum of extWrenchInTcp values
+        extWrenchInTcp_sum = [0, 0, 0, 0, 0, 0]
+
+        # Loop to take multiple samples
+        for i in range(num_samples):
+            time.sleep(0.001)
+            self.robot.getRobotStates(robot_states)
+            extWrenchInTcp_sum[0] += robot_states.extWrenchInTcp[0]
+            extWrenchInTcp_sum[1] += robot_states.extWrenchInTcp[1]
+            extWrenchInTcp_sum[2] += robot_states.extWrenchInTcp[2]
+            extWrenchInTcp_sum[3] += robot_states.extWrenchInTcp[3]
+            extWrenchInTcp_sum[4] += robot_states.extWrenchInTcp[4]
+            extWrenchInTcp_sum[5] += robot_states.extWrenchInTcp[5]
+
+        # Calculate the average extWrenchInTcp values
+        extWrenchInTcp_avg = [
+            value / num_samples for value in extWrenchInTcp_sum]
+
+        print(f"EXT-WRENCH-IN-TCP AVERAGES: {extWrenchInTcp_avg}")
+
+        # Create a dictionary to return the average values
+        result = {
+            'fx_avg': extWrenchInTcp_avg[0],
+            'fy_avg': extWrenchInTcp_avg[1],
+            'fz_avg': extWrenchInTcp_avg[2],
+            'mx_avg': extWrenchInTcp_avg[3],
+            'my_avg': extWrenchInTcp_avg[4],
+            'mz_avg': extWrenchInTcp_avg[5]
+        }
+
+        return result
