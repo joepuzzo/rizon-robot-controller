@@ -175,6 +175,11 @@ def start_server(config):
         logger(f"Controller says center robot")
         robot.robot_center()
 
+    @sio.on('robotRunPlan', namespace='/robot')
+    def on_robot_run_plan(name):
+        logger(f"Controller says run plan {name}")
+        robot.run_plan(name)
+
     @sio.on('robotSetAngles', namespace='/robot')
     def on_robot_set_angles(angles, speed=None, idle=None):
 

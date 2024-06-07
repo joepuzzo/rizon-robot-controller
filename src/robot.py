@@ -639,6 +639,48 @@ class Robot(EventEmitter):
         self.emit('meta')
         self.emit('moved')
 
+    # ==========================================================================================
+    def run_plan(self, name):
+        logger(f"Running plan {name}")
+
+        # Validate action
+        if not self.validate(enabled=True, cleared=True, moving=True, log=f'run_plan {name}'):
+            return
+
+        try:
+
+            # Put robot to plan execution mode
+            self.robot.setMode(self.mode.NRT_PLAN_EXECUTION)
+
+            # Execute the plan
+            self.robot.executePlan(name)
+            logger(f"Started Executing plan {name}")
+
+            # Assume we are moving when running a plan
+            self.moving = True
+            self.emit('meta')
+
+            # Wait for the plan to finish
+            while self.robot.isBusy():
+                time.sleep(.01)
+
+            logger(f"Done Executing plan {name}")
+
+            # Stop the robot
+            self.robot.stop()
+
+        except Exception as e:
+            self.errors.append({'type': 'error', 'message': str(e)})
+            logger(
+                f"An error occurred when trying to run plan {name}: {str(e)}")
+
+        self.moving = False
+
+        # Note order is important here, we need to make sure meta is sent before moved
+        # This will ensure anyone listening to move event has the corect meta state of this robot :)
+        self.emit('meta')
+        self.emit('moved')
+
     # -------------------- Force Tourque ---------------------
 
     def zero_ft_sensors(self):
