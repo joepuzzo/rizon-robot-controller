@@ -21,6 +21,22 @@ import flexivrdk
 logger = Debug('rizon:robot\t')
 
 
+# Helper function for outputing perfect seperator line
+# Example print_header_line('My Title', 50)
+# Output:
+# -------------------- My Title ---------------------
+def print_header_line(header, total_width):
+    # Subtracting 2 for the spaces around the header
+    padding = (total_width - len(header) - 2) // 2
+    header_line = f"{'-' * padding} {header} {'-' * padding}"
+
+    # Adjust if total width is odd
+    if len(header_line) < total_width:
+        header_line += '-'
+
+    print(header_line)
+
+
 class Robot(EventEmitter):
     def __init__(self, config):
         logger(
@@ -737,8 +753,8 @@ class Robot(EventEmitter):
             parameters = action['parameters']
             log = action.get('log', '')
 
-            print(
-                f"-------------------- ACTION {action_type} --------------------")
+            # Print the header line
+            print_header_line(f"ACTION ( {action_type} )", 60)
             if log:
                 logger(log)
 
@@ -781,6 +797,8 @@ class Robot(EventEmitter):
                 )
             elif action_type == 'zeroFT':
                 self.zero_ft_sensors()
+            elif action_type == 'wait':
+                time.sleep(parameters['time'])
 
         # Always put the robot into idle
         self.robot.stop()
