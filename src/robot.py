@@ -722,6 +722,73 @@ class Robot(EventEmitter):
         self.emit('meta')
         self.emit('zeroedFT')
 
+    # -------------------- Run Actions ---------------------
+    def run_actions(self, actions):
+        logger(f'Running actions {json.dumps(actions, indent=4)}')
+
+        # Validate action
+        if not self.validate(enabled=True, cleared=True, moving=True, log=f"run_actions {actions['name']}"):
+            return
+
+        # Loop through each action and execute it
+        for action in actions['actions']:
+
+            action_type = action['type']
+            parameters = action['parameters']
+            log = action.get('log', '')
+
+            print(
+                f"-------------------- ACTION {action_type} --------------------")
+            if log:
+                logger(log)
+
+            if action_type == 'moveL':
+
+                target = ' '.join(map(str, parameters['tcpPos']))
+                jointString = ' '.join(map(str, parameters['preferJntPos']))
+
+                self.move_l(
+                    target=target,
+                    frame=parameters.get('frame', 'WORLD WORLD_ORIGIN'),
+                    maxVel=parameters.get('speed', 0.1),
+                    preferJntPos=jointString,
+                    stop=parameters.get('idle', True)
+                )
+            elif action_type == 'moveJ':
+
+                jointString = ' '.join(map(str, parameters['angles']))
+
+                self.move_j(
+                    target=jointString,
+                    vel=parameters['speed'],
+                    stop=parameters.get('idle', True)
+                )
+            elif action_type == 'gripperMove':
+                self.gripper_set_position(
+                    pos=parameters['width'],
+                    speed=parameters.get('speed', 0.01),
+                    force=parameters.get('force', 0),
+                    wait=parameters.get('wait', None)
+                )
+            elif action_type == 'moveContact':
+                contactDirStr = ' '.join(map(str, parameters['contactDir']))
+
+                self.move_contact(
+                    contactDir=contactDirStr,
+                    contactVel=parameters['contactVel'],
+                    maxContactForce=parameters['maxContactForce'],
+                    stop=parameters.get('idle', True)
+                )
+            elif action_type == 'zeroFT':
+                self.zero_ft_sensors()
+
+        # Always put the robot into idle
+        self.robot.stop()
+
+        # important to emit meta first such that the controller has updated state before emitting actionsComplete
+        self.emit('meta')
+        self.emit('actionsComplete', actions['name'])
+
     # -------------------- Measrurements ---------------------
 
     def average_read(self):

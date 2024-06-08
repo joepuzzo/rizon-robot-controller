@@ -90,6 +90,11 @@ def start_server(config):
         logger('Sending zeroedFT')
         emit('zeroedFT', robot.meta)
 
+    @robot.on('actionsComplete')
+    def on_actions_complete(name):
+        logger('Sending actionsComplete')
+        emit('actionsComplete', name)
+
     @robot.on('pulse')
     def on_pulse(id, pos):
         emit('pulse', id)
@@ -228,6 +233,11 @@ def start_server(config):
         contactDirStr = ' '.join(map(str, contactDir))
         robot.move_contact(contactDir=contactDirStr, contactVel=contactVel,
                            maxContactForce=maxContactForce, stop=idle)
+
+    @sio.on('robotRunActions', namespace='/robot')
+    def on_robot_run_actions(actions):
+        logger(f"Controller says robotRunActions")
+        robot.run_actions(actions)
 
     @sio.on('robotUpdateConfig', namespace='/robot')
     def on_robot_update_config(key, value):
