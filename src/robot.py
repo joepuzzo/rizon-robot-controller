@@ -478,6 +478,8 @@ class Robot(EventEmitter):
 
     def gripper_set_position(self, pos, speed=0.01, force=0, wait=None):
 
+        print_header_line(f"GRIPPER-SET", 50)
+
         # Convert the % open 0-100 into a width in meters
         width = pos / 1000.0
 
@@ -519,6 +521,8 @@ class Robot(EventEmitter):
         # Validate action
         if not self.validate(enabled=True, cleared=True, moving=True, log='moveJ'):
             return
+
+        print_header_line(f"MOVE-J", 50)
 
         try:
 
@@ -567,6 +571,8 @@ class Robot(EventEmitter):
         if not self.validate(enabled=True, cleared=True, moving=True, log='moveL'):
             return
 
+        print_header_line(f"MOVE-L", 50)
+
         try:
             # Set to primitive execution if we need to
             if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
@@ -613,6 +619,8 @@ class Robot(EventEmitter):
         # Validate action
         if not self.validate(enabled=True, cleared=True, moving=True, log='moveContact'):
             return
+
+        print_header_line(f"MOVE-CONTACT", 50)
 
         try:
             # Set to primitive execution if we need to
@@ -700,6 +708,8 @@ class Robot(EventEmitter):
     # -------------------- Force Tourque ---------------------
 
     def zero_ft_sensors(self):
+
+        print_header_line(f"ZERO-FT", 50)
 
         # Get and print the current TCP force/moment readings
         robot_states = flexivrdk.RobotStates()
