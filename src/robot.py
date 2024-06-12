@@ -54,6 +54,7 @@ class Robot(EventEmitter):
         self.moving = False  # if the robot is moving
         self.freedrive = False  # if the robot is currently in freedrive
         self.errors = []  # array of any errors that got triggered
+        self.averages = {}  # Average read values
 
         # Setup rdk properties
         self.robot_ip = config['robot_ip']
@@ -198,7 +199,8 @@ class Robot(EventEmitter):
             'config': self.config,
             'motors': motors,
             'errors': self.errors,
-            'freedrive': self.freedrive
+            'freedrive': self.freedrive,
+            'averages': self.averages
         }
 
     @property
@@ -715,8 +717,8 @@ class Robot(EventEmitter):
         robot_states = flexivrdk.RobotStates()
         self.robot.getRobotStates(robot_states)
         logger(
-            "TCP force and moment reading in base frame BEFORE sensor zeroing: " +
-            list2str(robot_states.extWrenchInBase) + "[N][Nm]")
+            "TCP Force BEFORE sensor zeroing: " +
+            list2str(robot_states.extWrenchInTcp) + "[N][Nm]")
 
         # Set to primitive execution if we need to
         if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
@@ -740,8 +742,8 @@ class Robot(EventEmitter):
         # Get and print the current TCP force/moment readings
         self.robot.getRobotStates(robot_states)
         logger(
-            "TCP force and moment reading in base frame AFTER sensor zeroing: " +
-            list2str(robot_states.extWrenchInBase) + "[N][Nm]")
+            "TCP Force AFTER sensor zeroing: " +
+            list2str(robot_states.extWrenchInTcp) + "[N][Nm]")
 
         # Note order is important here, we need to make sure state is updated before we let anyone know that we are done zeroing
         self.emit('encoder')
@@ -821,11 +823,13 @@ class Robot(EventEmitter):
 
     def average_read(self):
 
+        print_header_line(f"AVERAGE-READ", 50)
+
         # Initialize the robot states variable
         robot_states = flexivrdk.RobotStates()
 
         # Initialize the number of samples
-        num_samples = 100
+        num_samples = 500
 
         # Initialize the sum of extWrenchInTcp values
         extWrenchInTcp_sum = [0, 0, 0, 0, 0, 0]
@@ -845,16 +849,10 @@ class Robot(EventEmitter):
         extWrenchInTcp_avg = [
             value / num_samples for value in extWrenchInTcp_sum]
 
-        print(f"EXT-WRENCH-IN-TCP AVERAGES: {extWrenchInTcp_avg}")
+        logger(f"EXT-WRENCH-IN-TCP AVERAGES: {extWrenchInTcp_avg}")
 
-        # Create a dictionary to return the average values
-        result = {
-            'fx_avg': extWrenchInTcp_avg[0],
-            'fy_avg': extWrenchInTcp_avg[1],
-            'fz_avg': extWrenchInTcp_avg[2],
-            'mx_avg': extWrenchInTcp_avg[3],
-            'my_avg': extWrenchInTcp_avg[4],
-            'mz_avg': extWrenchInTcp_avg[5]
-        }
+        self.averages['extWrenchInTcp'] = extWrenchInTcp_avg
 
-        return result
+        # important to emit meta first such that the controller has updated state before emitting actionsComplete
+        self.emit('meta')
+        self.emit('averageReadComplete')

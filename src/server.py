@@ -95,6 +95,11 @@ def start_server(config):
         logger('Sending actionsComplete')
         emit('actionsComplete', name)
 
+    @robot.on('averageReadComplete')
+    def on_average_read_complete():
+        logger('Sending averageReadComplete')
+        emit('averageReadComplete', robot.meta)
+
     @robot.on('pulse')
     def on_pulse(id, pos):
         emit('pulse', id)
@@ -238,6 +243,11 @@ def start_server(config):
     def on_robot_run_actions(actions):
         logger(f"Controller says robotRunActions")
         robot.run_actions(actions)
+
+    @sio.on('robotAverageRead', namespace='/robot')
+    def on_robot_average_read():
+        logger(f"Controller says robotAverageRead")
+        robot.average_read()
 
     @sio.on('robotUpdateConfig', namespace='/robot')
     def on_robot_update_config(key, value):
