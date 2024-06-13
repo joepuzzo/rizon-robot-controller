@@ -215,12 +215,13 @@ def start_server(config):
         speed = parameters["speed"]
         preferJntPos = parameters["preferJntPos"]
         idle = parameters.get("idle", True)
+        acc = parameters.get("acc", 1.5)
 
         # Call the robots moveL command
         target = ' '.join(map(str, position))
         jointString = ' '.join(map(str, preferJntPos))
         robot.move_l(target=target, frame=frame,
-                     maxVel=speed, preferJntPos=jointString, stop=idle)
+                     maxVel=speed, preferJntPos=jointString, stop=idle, acc=acc)
 
     @sio.on('robotMoveContact', namespace='/robot')
     def on_robot_MoveContact(parameters):

@@ -567,7 +567,7 @@ class Robot(EventEmitter):
         self.emit('meta')
         self.emit('moved')
 
-    def move_l(self, target, frame='WORLD WORLD_ORIGIN', maxVel="0.1", preferJntPos=None, stop=True):
+    def move_l(self, target, frame='WORLD WORLD_ORIGIN', maxVel="0.1", preferJntPos=None, stop=True, acc=1.5):
 
         # Validate action
         if not self.validate(enabled=True, cleared=True, moving=True, log='moveL'):
@@ -586,7 +586,7 @@ class Robot(EventEmitter):
             command = f"MoveL(target={target} {frame}, maxVel={maxVel})"
 
             if preferJntPos:
-                command = f"MoveL(target={target} {frame}, maxVel={maxVel}, preferJntPos={preferJntPos})"
+                command = f"MoveL(target={target} {frame}, maxVel={maxVel}, preferJntPos={preferJntPos}, acc={acc})"
 
             # We are moving to a new location
             self.moving = True
@@ -780,6 +780,7 @@ class Robot(EventEmitter):
                     frame=parameters.get('frame', 'WORLD WORLD_ORIGIN'),
                     maxVel=parameters.get('speed', 0.1),
                     preferJntPos=jointString,
+                    acc=parameters.get('acc', 1.5),
                     stop=parameters.get('idle', True)
                 )
             elif action_type == 'moveJ':
