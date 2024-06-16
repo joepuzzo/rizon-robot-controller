@@ -217,11 +217,18 @@ def start_server(config):
         idle = parameters.get("idle", True)
         acc = parameters.get("acc", 1.5)
 
+        # Convert the array to the desired string format
+        waypoints = parameters.get("waypoints", None)
+        waypointsString = None
+        if waypoints:
+            waypointsString = " ".join(
+                " ".join(map(str, waypoint)) + f" {frame}" for waypoint in waypoints)
+
         # Call the robots moveL command
         target = ' '.join(map(str, position))
         jointString = ' '.join(map(str, preferJntPos))
         robot.move_l(target=target, frame=frame,
-                     maxVel=speed, preferJntPos=jointString, stop=idle, acc=acc)
+                     maxVel=speed, preferJntPos=jointString, stop=idle, acc=acc, waypoints=waypointsString)
 
     @sio.on('robotMoveContact', namespace='/robot')
     def on_robot_MoveContact(parameters):

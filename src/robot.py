@@ -567,7 +567,7 @@ class Robot(EventEmitter):
         self.emit('meta')
         self.emit('moved')
 
-    def move_l(self, target, frame='WORLD WORLD_ORIGIN', maxVel="0.1", preferJntPos=None, stop=True, acc=1.5):
+    def move_l(self, target, frame='WORLD WORLD_ORIGIN', maxVel="0.1", preferJntPos=None, stop=True, acc=1.5, waypoints=None):
 
         # Validate action
         if not self.validate(enabled=True, cleared=True, moving=True, log='moveL'):
@@ -585,8 +585,15 @@ class Robot(EventEmitter):
             # Build command
             command = f"MoveL(target={target} {frame}, maxVel={maxVel})"
 
-            if preferJntPos:
+            # Add optional fields
+            if preferJntPos and waypoints:
+                command = f"MoveL(target={target} {frame}, maxVel={maxVel}, preferJntPos={preferJntPos}, acc={acc}, waypoints={waypoints})"
+            elif preferJntPos:
                 command = f"MoveL(target={target} {frame}, maxVel={maxVel}, preferJntPos={preferJntPos}, acc={acc})"
+            elif waypoints:
+                command = f"MoveL(target={target} {frame}, maxVel={maxVel}, waypoints={waypoints})"
+
+            logger(f"Executing Command: {command}")
 
             # We are moving to a new location
             self.moving = True
@@ -772,16 +779,25 @@ class Robot(EventEmitter):
 
             if action_type == 'moveL':
 
+                frame = parameters.get('frame', 'WORLD WORLD_ORIGIN')
                 target = ' '.join(map(str, parameters['tcpPos']))
                 jointString = ' '.join(map(str, parameters['preferJntPos']))
+                jointString = ' '.join(map(str, parameters['preferJntPos']))
+                # Convert the array to the desired string format
+                waypoints = parameters.get('waypoints', None)
+                waypointsString = None
+                if waypoints:
+                    waypointsString = " ".join(
+                        " ".join(map(str, waypoint)) + f" {frame}" for waypoint in waypoints)
 
                 self.move_l(
                     target=target,
-                    frame=parameters.get('frame', 'WORLD WORLD_ORIGIN'),
+                    frame=frame,
                     maxVel=parameters.get('speed', 0.1),
                     preferJntPos=jointString,
                     acc=parameters.get('acc', 1.5),
-                    stop=parameters.get('idle', True)
+                    stop=parameters.get('idle', True),
+                    waypoints=waypointsString
                 )
             elif action_type == 'moveJ':
 
