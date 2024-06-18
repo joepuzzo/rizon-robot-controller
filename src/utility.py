@@ -97,3 +97,26 @@ def toEuler(pos):
     final_array = pos[:3] + euler_angles
 
     return final_array
+
+
+# This function will take an array and turn it into a string for command execution
+# Example:
+#
+# array_to_string([[1, 2, 3], [4, 5, 6]], "WORLD")
+#
+# Output: "1 2 3 WORLD 4 5 6 WORLD"
+def array_to_string(array, inject_value=None):
+    if not array:
+        return ""
+
+    if isinstance(array[0], list):  # Check if it's an array of arrays
+        result = " ".join(
+            " ".join(map(str, sub_array)) +
+            (f" {inject_value}" if inject_value else "")
+            for sub_array in array
+        )
+    else:  # It's a single array
+        result = " ".join(map(str, array)) + \
+            (f" {inject_value}" if inject_value else "")
+
+    return result

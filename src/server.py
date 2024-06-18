@@ -3,6 +3,8 @@ import json
 import time
 from robot import Robot
 from debug import Debug
+from utility import array_to_string
+
 
 logger = Debug('rizon:server\t')
 
@@ -209,26 +211,23 @@ def start_server(config):
             f"Controller says robotMoveL with parameters {json.dumps(parameters,  indent=4)}"
         )
 
-        # Get parameters off of the event
-        position = parameters["position"]
-        frame = parameters["frame"]
-        speed = parameters["speed"]
-        preferJntPos = parameters["preferJntPos"]
-        idle = parameters.get("idle", True)
-        acc = parameters.get("acc", 1.5)
+        frame = parameters.get('frame', 'WORLD WORLD_ORIGIN')
+        vel = parameters.get('speed', 0.1)
+        acc = parameters.get('acc', 1.5)
+        stop = parameters.get('idle', True)
 
-        # Convert the array to the desired string format
-        waypoints = parameters.get("waypoints", None)
-        waypointsString = None
-        if waypoints:
-            waypointsString = " ".join(
-                " ".join(map(str, waypoint)) + f" {frame}" for waypoint in waypoints)
+        # Prep the values
+        target = array_to_string(parameters['position'], frame)
+        preferJntPos = array_to_string(parameters.get('preferJntPos'))
+        waypoints = array_to_string(parameters.get('waypoints'), frame)
 
-        # Call the robots moveL command
-        target = ' '.join(map(str, position))
-        jointString = ' '.join(map(str, preferJntPos))
-        robot.move_l(target=target, frame=frame,
-                     maxVel=speed, preferJntPos=jointString, stop=idle, acc=acc, waypoints=waypointsString)
+        robot.move_l({
+            "target": target,
+            "vel": vel,
+            "preferJntPos": preferJntPos,
+            "acc": acc,
+            "waypoints": waypoints
+        }, stop)
 
     @sio.on('robotMoveContact', namespace='/robot')
     def on_robot_MoveContact(parameters):
@@ -237,15 +236,17 @@ def start_server(config):
         )
 
         # Get parameters off of the event
-        contactDir = parameters["contactDir"]
+        contactDir = contactDir = array_to_string(parameters['contactDir'])
         contactVel = parameters["contactVel"]
         maxContactForce = parameters["maxContactForce"]
         idle = parameters.get("idle", True)
 
         # Call the robots moveL command
-        contactDirStr = ' '.join(map(str, contactDir))
-        robot.move_contact(contactDir=contactDirStr, contactVel=contactVel,
-                           maxContactForce=maxContactForce, stop=idle)
+        robot.move_contact({
+            "contactDir": contactDir,
+            "contactVel": contactVel,
+            "maxContactForce": maxContactForce
+        }, stop=idle)
 
     @sio.on('robotRunActions', namespace='/robot')
     def on_robot_run_actions(actions):

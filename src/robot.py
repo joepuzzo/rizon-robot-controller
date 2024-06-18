@@ -8,6 +8,7 @@ from motor import Motor
 from debug import Debug
 from utility import toEuler
 from utility import list2str
+from utility import array_to_string
 from utility import parse_pt_states
 import math
 
@@ -35,6 +36,40 @@ def print_header_line(header, total_width):
         header_line += '-'
 
     print(header_line)
+
+
+# Helper function for creating a command string from a command name and a dictionary of parameters
+# Example: create_command("MoveL", { 'frame': 'WORLD WORLD_ORIGIN', 'maxVel': '0.1' }, ["target"])
+# Output:
+# "MoveL(frame=WORLD WORLD_ORIGIN, maxVel=0.1)"
+def create_command(name, params, required=[]):
+    # Check for required parameters
+    missing_params = []
+    for param in required:
+        if param not in params or params[param] is None:
+            missing_params.append(param)
+
+    if missing_params:
+        raise ValueError(
+            f"Missing required parameters: {', '.join(missing_params)} for {name}")
+
+    # Start building the command
+    command_parts = [f"{name}("]
+
+    # Add all fields dynamically
+    for key, value in params.items():
+        if value not in [None, ""]:
+            command_parts.append(f"{key}={value}")
+
+    # Join command parts into the final command string
+    command = ', '.join(command_parts) + ")"
+
+    # Ensure the correct format of the command
+    command = command.replace(f"{name}(,", f"{name}(").strip()
+
+    logger(f"Executing Command: {command}")
+
+    return command
 
 
 class Robot(EventEmitter):
@@ -342,9 +377,14 @@ class Robot(EventEmitter):
         if not self.validate(enabled=True, cleared=True, moving=True, log='move the robot'):
             return
 
-        # Set all motors to a position via move_j
-        target = ' '.join(map(str, angles))
-        self.move_j(target, speed, stop=idle)
+        # Prep the values
+        target = array_to_string(angles)
+
+        # Execute a MoveJ
+        self.move_j({
+            'target': target,
+            'vel': speed
+        }, stop=idle)
 
     # -------------------- Freedrive Functions --------------------
 
@@ -516,27 +556,41 @@ class Robot(EventEmitter):
         self.emit('meta')
         self.emit('grasped')
 
+    # -------------------- Robot Functions ---------------------
+
+    def set_mode(self, mode, log):
+        # Set to mode only if we are not already in that mode
+        if self.robot.getMode() != mode:
+            logger(f"Setting to {mode} before {log}")
+            self.robot.setMode(mode)
+
     # -------------------- Move Functions ---------------------
 
-    def move_j(self, target, vel, stop=True):
+    def move_j(self, params, stop=True):
 
         # Validate action
-        if not self.validate(enabled=True, cleared=True, moving=True, log='moveJ'):
+        if not self.validate(enabled=True, cleared=True, moving=True, log='MoveJ'):
             return
 
         print_header_line(f"MOVE-J", 50)
 
+        # Define default values
+        defaults = {
+            'target': None,
+            'waypoints': None,
+            'vel': 0.1,
+        }
+
+        # Merge user params with defaults
+        parameters = {**defaults, **params}
+
         try:
 
-            # Set to primitive execution if we need to
-            if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
-                logger(
-                    f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before moveJ")
-                self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+            # Set mode
+            self.set_mode(self.mode.NRT_PRIMITIVE_EXECUTION, "MoveJ")
 
-            # Build command
-            command = f"MoveJ(target={target}, vel={vel})"
-            logger(f"Executing Command: {command}")
+            # Create the command using the helper function
+            command = create_command("MoveJ", parameters, required=["target"])
 
             # We are moving to a new location
             self.moving = True
@@ -567,33 +621,33 @@ class Robot(EventEmitter):
         self.emit('meta')
         self.emit('moved')
 
-    def move_l(self, target, frame='WORLD WORLD_ORIGIN', maxVel="0.1", preferJntPos=None, stop=True, acc=1.5, waypoints=None):
+    def move_l(self, params, stop=True):
 
         # Validate action
-        if not self.validate(enabled=True, cleared=True, moving=True, log='moveL'):
+        if not self.validate(enabled=True, cleared=True, moving=True, log='MoveL'):
             return
 
         print_header_line(f"MOVE-L", 50)
 
+        # Define default values
+        defaults = {
+            'target': None,
+            'preferJntPos': None,
+            'waypoints': None,
+            'vel': 0.1,
+            'acc': 1.5,
+            'zoneRadius': 'Z200' if params.get('waypoints') else None
+        }
+
+        # Merge user params with defaults
+        parameters = {**defaults, **params}
+
         try:
-            # Set to primitive execution if we need to
-            if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
-                logger(
-                    f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before moveL")
-                self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+            # Set mode
+            self.set_mode(self.mode.NRT_PRIMITIVE_EXECUTION, "MoveL")
 
-            # Build command
-            command = f"MoveL(target={target} {frame}, maxVel={maxVel})"
-
-            # Add optional fields
-            if preferJntPos and waypoints:
-                command = f"MoveL(target={target} {frame}, maxVel={maxVel}, preferJntPos={preferJntPos}, acc={acc}, waypoints={waypoints})"
-            elif preferJntPos:
-                command = f"MoveL(target={target} {frame}, maxVel={maxVel}, preferJntPos={preferJntPos}, acc={acc})"
-            elif waypoints:
-                command = f"MoveL(target={target} {frame}, maxVel={maxVel}, waypoints={waypoints})"
-
-            logger(f"Executing Command: {command}")
+            # Create the command using the helper function
+            command = create_command("MoveL", parameters, required=["target"])
 
             # We are moving to a new location
             self.moving = True
@@ -623,23 +677,30 @@ class Robot(EventEmitter):
         self.emit('meta')
         self.emit('moved')
 
-    def move_contact(self, contactDir, contactVel, maxContactForce, stop=True):
+    def move_contact(self, params, stop=True):
 
         # Validate action
-        if not self.validate(enabled=True, cleared=True, moving=True, log='moveContact'):
+        if not self.validate(enabled=True, cleared=True, moving=True, log='MoveContact'):
             return
 
         print_header_line(f"MOVE-CONTACT", 50)
 
-        try:
-            # Set to primitive execution if we need to
-            if self.robot.getMode() != self.mode.NRT_PRIMITIVE_EXECUTION:
-                logger(
-                    f"Setting to {self.mode.NRT_PRIMITIVE_EXECUTION} before moveContact")
-                self.robot.setMode(self.mode.NRT_PRIMITIVE_EXECUTION)
+        # Define default values
+        defaults = {
+            'contactDir': None,
+            'contactVel': None,
+            'maxContactForce': None
+        }
 
-            # Build command
-            command = f"Contact(contactDir={contactDir}, contactVel={contactVel}, maxContactForce={maxContactForce})"
+        # Merge user params with defaults
+        parameters = {**defaults, **params}
+
+        try:
+            # Set mode
+            self.set_mode(self.mode.NRT_PRIMITIVE_EXECUTION, "Contact")
+
+            # Create the command using the helper function
+            command = create_command("Contact", parameters)
 
             # We are moving to a new location
             self.moving = True
@@ -780,34 +841,37 @@ class Robot(EventEmitter):
             if action_type == 'moveL':
 
                 frame = parameters.get('frame', 'WORLD WORLD_ORIGIN')
-                target = ' '.join(map(str, parameters['tcpPos']))
-                jointString = ' '.join(map(str, parameters['preferJntPos']))
-                jointString = ' '.join(map(str, parameters['preferJntPos']))
-                # Convert the array to the desired string format
-                waypoints = parameters.get('waypoints', None)
-                waypointsString = None
-                if waypoints:
-                    waypointsString = " ".join(
-                        " ".join(map(str, waypoint)) + f" {frame}" for waypoint in waypoints)
+                vel = parameters.get('speed', 0.1)
+                acc = parameters.get('acc', 1.5)
+                stop = parameters.get('idle', True)
 
-                self.move_l(
-                    target=target,
-                    frame=frame,
-                    maxVel=parameters.get('speed', 0.1),
-                    preferJntPos=jointString,
-                    acc=parameters.get('acc', 1.5),
-                    stop=parameters.get('idle', True),
-                    waypoints=waypointsString
-                )
+                # Prep the values
+                target = array_to_string(parameters['tcpPos'], frame)
+                preferJntPos = array_to_string(parameters.get('preferJntPos'))
+                waypoints = array_to_string(parameters.get('waypoints'), frame)
+
+                # Execute the command
+                self.move_l({
+                    "target": target,
+                    "vel": vel,
+                    "preferJntPos": preferJntPos,
+                    "acc": acc,
+                    "waypoints": waypoints
+                }, stop)
+
             elif action_type == 'moveJ':
 
-                jointString = ' '.join(map(str, parameters['angles']))
+                # Prep the values
+                target = array_to_string(parameters['angles'])
+                vel = parameters.get('speed')
+                stop = parameters.get('idle', True)
 
-                self.move_j(
-                    target=jointString,
-                    vel=parameters['speed'],
-                    stop=parameters.get('idle', True)
-                )
+                # Execute the command
+                self.move_j({
+                    'target': target,
+                    'vel': vel,
+                }, stop)
+
             elif action_type == 'gripperMove':
                 self.gripper_set_position(
                     pos=parameters['width'],
@@ -815,17 +879,25 @@ class Robot(EventEmitter):
                     force=parameters.get('force', 0),
                     wait=parameters.get('wait', None)
                 )
-            elif action_type == 'moveContact':
-                contactDirStr = ' '.join(map(str, parameters['contactDir']))
 
-                self.move_contact(
-                    contactDir=contactDirStr,
-                    contactVel=parameters['contactVel'],
-                    maxContactForce=parameters['maxContactForce'],
-                    stop=parameters.get('idle', True)
-                )
+            elif action_type == 'moveContact':
+
+                # Prep the values
+                contactDir = array_to_string(parameters['contactDir'])
+                contactVel = parameters['contactVel']
+                maxContactForce = parameters['maxContactForce']
+                stop = parameters.get('idle', True)
+
+                # Execute the command
+                self.move_contact({
+                    "contactDir": contactDir,
+                    "contactVel": contactVel,
+                    "maxContactForce": maxContactForce
+                }, stop)
+
             elif action_type == 'zeroFT':
                 self.zero_ft_sensors()
+
             elif action_type == 'wait':
                 time.sleep(parameters['time'])
 
