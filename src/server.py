@@ -92,6 +92,25 @@ def start_server(config):
         logger('Sending zeroedFT')
         emit('zeroedFT', robot.meta)
 
+    # Single Action Events
+
+    @robot.on('actionStart')
+    def on_action_start(name):
+        logger('Sending actionStart')
+        emit('actionStart', name)
+
+    @robot.on('actionComplete')
+    def on_action_complete(name):
+        logger('Sending actionComplete')
+        emit('actionComplete', name)
+
+    # List Of Actions Events
+
+    @robot.on('actionsStart')
+    def on_actions_start(name):
+        logger('Sending actionsStart')
+        emit('actionsStart', name)
+
     @robot.on('actionsComplete')
     def on_actions_complete(name):
         logger('Sending actionsComplete')

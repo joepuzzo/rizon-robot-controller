@@ -826,6 +826,8 @@ class Robot(EventEmitter):
         if not self.validate(enabled=True, cleared=True, moving=True, log=f"run_actions {actions['name']}"):
             return
 
+        self.emit('actionsStart', actions['name'])
+
         # Loop through each action and execute it
         for action in actions['actions']:
 
@@ -837,6 +839,8 @@ class Robot(EventEmitter):
             print_header_line(f"ACTION ( {action_type} )", 60)
             if log:
                 logger(log)
+
+            self.emit('actionStart', action['name'])
 
             if action_type == 'moveL':
 
@@ -900,6 +904,8 @@ class Robot(EventEmitter):
 
             elif action_type == 'wait':
                 time.sleep(parameters['time'])
+
+            self.emit('actionComplete', action['name'])
 
         # Always put the robot into idle
         self.robot.stop()
