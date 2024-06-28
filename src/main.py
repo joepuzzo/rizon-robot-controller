@@ -7,7 +7,6 @@ from server import start_server
 config = {
     'port': 80,  # client port to connect to
     'host': 'localhost',  # client url to connect to
-    'id': 'Rizon',        # robot id
     'robot_ip': '192.168.2.100',  # default robot IP
     'local_ip': '192.168.2.104',  # default local IP
 }
@@ -25,6 +24,11 @@ for i, val in enumerate(args):
         config['local_ip'] = args[i + 1]
     elif val == '--url':
         config['url'] = args[i + 1]
+    elif val == '--id':
+        config['id'] = args[i + 1]
+    elif val == '--key':
+        config['key'] = args[i + 1]
+
 
 # Start the server
 start_server(config)

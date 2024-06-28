@@ -33,7 +33,7 @@ Here is how you can run the robot
 
 ```bash
 cd src
-sudo DEBUG='rizon:.*' ../venv/bin/python main.py --port 3000 --host localhost
+sudo DEBUG='rizon:.*' ../venv/bin/python main.py --port 3000 --host localhost --key unique-key-here --id your-robot-id
 ```
 
 Note you can optionally pass
@@ -46,5 +46,11 @@ Also you can try connecting to the deployed instance of robot viewer like this
 
 ```bash
 cd src
-sudo DEBUG='rizon:.*' ../venv/bin/python main.py --url https://robot-viewer.com
+sudo DEBUG='rizon:.*' ../venv/bin/python main.py --url https://robot-viewer.com --key unique-key-here --id your-robot-id
+```
+
+**NOTE** The unique key ensures that only you can control this robot from robot-viewer, you would feed this key to robot viewer like so.
+
+```
+https://robot-viewer.com?key=unique-key-here
 ```
